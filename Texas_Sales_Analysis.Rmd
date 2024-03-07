@@ -1,0 +1,670 @@
+---
+title: "Analisi del mercato immobiliare in Texas"
+subtitle: "Progetti finale di Statistica Descrittiva"
+author: "Simone Santonoceto"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+1)  Scarica il dataset realestate_textas.csv da qui e importalo con R,
+    questo contiene dei dati riguardanti le vendite di immobili in
+    Texas. Le variabili del dataset sono:
+
+```{r realestate}
+realestate = read.csv("realestate_texas.csv", header = TRUE, sep = ",")
+```
+
+2)  Indica il tipo di variabili contenute nel dataset.
+
+```{r header}
+head(realestate,5)
+attach(realestate)
+```
+
+City è una variabile qualitativa perchè indica la città in cui è stata
+effettuata la vendita Year e month le posso considerare variabili
+qualitative, nonostante siano dei numeri, perchè rappresentano l'anno e
+il mese in cui è stata effettuata la vendita sales e listings sono
+variabili quantitative discrete, in quanto esprimono un conteggio, non
+posso fare mezza vendita o pubblicare mezzo annuncio volume,
+median_price, e months_inventory sono variabili quantitative continue,
+esprimono una quantità, nonstante alcune non siano continue per loro
+natura, posso considerarle tali perchè hanno una risoluzione abbastanza
+elevata
+
+3)  Calcola Indici di posizione, variabilità e forma per tutte le
+    variabili per le quali ha senso farlo, per le altre crea una
+    distribuzione di frequenza. Commenta tutto brevemente. Uso summary
+    per calcolare gli indici di posizione, variabilità e forma per le
+    variabili quantitative.
+
+```{r city}
+N_city <- length(city)
+city_freq_abs <- table(city)
+city_freq_rel <- city_freq_abs/N_city
+city_distr_freq <- cbind(city_freq_abs, city_freq_rel)
+city_distr_freq
+```
+
+Ogni città ha la stessa frequenza assoluta e relativa, quindi la
+distribuzione di frequenza per la città è uniforme.
+
+```{r year}
+N_year <- length(year)
+year_freq_abs <- table(year)
+year_freq_rel <- year_freq_abs/N_year
+year_distr_freq <- cbind(year_freq_abs, year_freq_rel)
+year_distr_freq
+```
+
+Ogni anno ha la stessa frequenza assoluta e relativa, quindi la
+distribuzione di frequenza per gli anni è uniforme.
+
+```{r month}
+N_month <- length(month)
+month_freq_abs <- table(month)
+month_freq_rel <- city_freq_abs/N_month
+month_distr_freq <- cbind(month_freq_abs, month_freq_rel)
+month_distr_freq
+```
+
+Ogni mese ha la stessa frequenza assoluta e relativa, quindi la
+distribuzione di frequenza per i mesi è uniforme.
+
+```{r sales summ}
+summary(sales)
+```
+
+```{r volume summ}
+summary(volume)
+```
+
+```{r median_price summ}
+summary(median_price)
+```
+
+```{r listings summ}
+summary(listings)
+```
+
+```{r months_inventory summ}
+summary(months_inventory)
+```
+
+4)  Qual è la variabile con variabilità più elevata? Come ci sei
+    arrivato? E quale quella più asimmetrica? Proviamo a calcolare i
+    range di variazione assoluti delle variabili
+
+```{r range di variaziione}
+
+range <- function(x) {
+  return (round(max(x)-min(x), digits = 3))
+}
+
+cat(
+paste("Vendite ->",range(sales)),
+paste("Volume ->",range(volume)),
+paste("Prezzo mediano ->",range(median_price)),
+paste("Annunci ->",range(listings)),
+paste("Mesi medi per vendita ->",range(months_inventory)),
+sep = "\n")
+```
+
+Da una prima analisi sembrerebbe che la variabile che varia maggiormente
+sia il median price, tuttavia queste variabili hanno scale molto diverse
+ed è quindi bene calolare il coefficiente di variazione di ogni singola
+variabile
+
+```{r coefficiente di variaziione}
+
+cvar <- function(x) {
+  return (round(sd(x)/mean(x)*100, digits = 3))
+}
+
+cat(
+paste("Vendite ->",cvar(sales)),
+paste("Volume ->",cvar(volume)),
+paste("Prezzo mediano ->",cvar(median_price)),
+paste("Annunci ->",cvar(listings)),
+paste("Mesi medi per vendita ->",cvar(months_inventory)),
+sep = "\n")
+```
+
+Da questa analisi è evidente che la variabile con coefficiente di
+variazione più elevato sia infatti Volume e non median price, questo
+perchè la scala di prezzo mediano era in milioni di dollari ed il range
+era dunque più elevato
+
+Utilizzo il pacchetto moments per calolare l'indice di asimmetria di
+fisher
+
+```{r skewness, warning=FALSE}
+library(moments)
+cat(
+paste("Vendite  ->", round(skewness(sales),3)),
+paste("Volume  ->", round(skewness(volume),3)),
+paste("Prezzo mediano ->", round(skewness(median_price),3)),
+paste("Annunci  ->", round(skewness(listings),3)),
+paste("Mesi medi per vendita  ->", round(skewness(months_inventory),3)),
+sep = "\n")
+```
+
+La variabile più asimmetrica è volume, perchè ha il valore assoluto di
+skewness più alto. Questa variabile ha asimmetria positiva, di fatti è
+verificata la relazione Media \> Mediana \> Moda. Visualizzo i dati
+
+```{r volume}
+summary(volume)
+```
+
+Media e mediana confermano la relazione precedente, la moda essendo
+Volume una variabile quantitaiva va stimata, suddivido in classi la
+variabile volume e valuto la moda
+
+```{r volume class}
+volume_cl <- cut(volume, seq(5, 100, 10))
+table(volume_cl)
+```
+
+I valori più frequenti si concentrano sulle classi sotto a 25, quindi si
+conferma media \> mediana \> moda
+
+5)  Dividi una delle variabili quantitative in classi, scegli tu quale e
+    come, costruisci la distribuzione di frequenze, il grafico a barre
+    corrispondente e infine calcola l'indice di Gini.
+
+Divido la variabile sales in classi di ampiezza 50
+
+```{r sales_cl}
+sales_cl <- cut(sales, seq(50, 450, 50))
+table(sales_cl)
+```
+
+Costruisco la distribuzione di frequenza per la variabile sales
+
+```{r sales class}
+N_sales_cl <- length(sales_cl)
+sales_cl_freq_abs <- table(sales_cl)
+sales_cl_freq_rel <- sales_cl_freq_abs/N_sales_cl
+sales_cl_distr_freq <- cbind(sales_cl_freq_abs, sales_cl_freq_rel)
+sales_cl_distr_freq
+```
+
+\newpage
+
+Costruisco il grafico a barre
+
+```{r sales graph}
+library(ggplot2)
+ggplot()+
+  geom_bar(aes(x = sales_cl, fill = city), position = "fill")+
+  labs(x="Classe di prezzo", y="Frequenza assoluta", title = "Vendite")+
+  scale_y_continuous(breaks = seq(0, 1, 0.1))+
+  theme_minimal()+
+  guides(fill=guide_legend(title="City"))+
+  theme(legend.position = "top")
+
+```
+
+Dal grafico possiamo vedere che:
+
+1)  Withca Falls ha realizzato vendite solo nei range fino a 200k;
+2)  Beamount ha realizzato vendite nel range da 50k a 300k con vendite
+    maggiori nel range 150k-250k;
+3)  Tyler è concentrata maggiormente nei range da 200k a 450k, con un
+    picco nel range 300k-350k;
+4)  Bryan-College è distribuita in tutti i range e domina il range più
+    alto 400k-450k.
+
+Costruisco una funzione per calolare l'indice di Gini visto che dovrò
+usarla più volte
+
+```{r gini function}
+gini.index <- function(x) {
+  ni=table(x)
+  fi=ni/length(x)
+  fi2=fi^2
+  J = length(table(x))
+  gini = 1-sum(fi2)
+  gini.normalizzato = gini/((J-1)/J)
+  
+  return(gini.normalizzato)
+}
+```
+
+Calcolo l'indice di gini per la variabile sales suddivisa in classi
+
+```{r gini sales}
+gini.index(sales_cl)
+```
+
+L'indice di Gini tende a 1, quindi la variabile sales è molto eterogenea
+
+```{r summary sales}
+summary(sales_cl)
+```
+
+6)  Indovina l'indice di gini per la variabile city e commenta il
+    risultato.
+
+La variabile city è equidistribuita, quindi l'indice di gini sarà 1
+Calcoliamolo come conferma
+
+```{r gini city}
+gini.index(city)
+```
+
+Come supposto dall'analisi precedente, l'indice di gini è 1
+
+7)  Qual è la probabilità che presa una riga a caso di questo dataset
+    essa riporti la città "Beaumont"? E la probabilità che riporti il
+    mese di Luglio? E la probabilità che riporti il mese di dicembre
+    2012?
+
+La distribuzione di frequenza è uniforme per queste 3 variabili: la
+probabilità che presa una riga a caso di questo dataset essa riporti la
+città "Beaumont" è 1/4 la probabilità che riporti il mese di Luglio è
+1/12 la probabilità che riporti il mese di dicembre 2012 è: probabilità
+dicembre 1/12 \* probabilità 2012 1/5 = 1/60
+
+```{r probability}
+prob <- function(value) {
+  N <- length(value)
+  value_freq_abs <- table(value)
+  value_freq_rel <- value_freq_abs/N
+  value_distr_freq <- cbind(value_freq_rel)
+  return(value_distr_freq)
+}
+
+prob(city)["Beaumont",1] == 1/4
+prob(month)["12",1] == 1/12
+prob(month)["12",1] * prob(year)["2012",1] == 1/5 * 1/12
+
+```
+
+8)  Esiste una colonna col prezzo mediano, creane una che indica invece
+    il prezzo medio, utilizzando le altre variabili che hai a
+    disposizione.
+
+Creo una colonna che indichi il prezzo medio usando il numero delle
+vendite ed il volume totale di vendita
+
+```{r average_price}
+average_price <- volume/sales *1e6
+realestate <- cbind(realestate, average_price)
+head(realestate)
+
+```
+
+9)  Prova a creare un'altra colonna che dia un'idea di "efficacia" degli
+    annunci di vendita. Riesci a fare qualche considerazione?
+
+Avendo a disposizione il numero di annunci attivi ed il numero di
+vendite posso creare un indice di efficacia con il rapporto tra questi
+due valori
+
+```{r efficacia}
+efficacia <- sales/listings*100
+realestate <- cbind(realestate, efficacia)
+head(realestate)
+```
+
+Per fare qualche considerazione raggruppo i dati per anno e vedo se ci
+sono stati anni migliori di altri
+
+```{r efficacia annuale, warning=FALSE}
+library(dplyr)
+realestate %>%
+  group_by(year) %>%
+  summarise(efficacia_media = mean(efficacia))
+```
+
+```{r grafico efficacia annuale per città}
+ggplot()+
+  geom_bar(aes(x = year, y = efficacia, fill=city),stat = "identity")+
+  labs(x="Anno", y="Efficacia", title = "Efficacia annuale per città")+
+  theme_minimal()+
+  guides(fill=guide_legend(title="City"))+
+  theme(legend.position = "top")
+```
+
+Da questi valori possiamo dedurre che il 2014 è stato l'anno dove gli
+annunci sono stati più efficaci, il 2011 è stato l'anno dove sono stati
+meno efficaci Nello specifico per Witchita Falls l'anno più efficace è
+stato il 2013, mentre il 2011 è stato l'anno meno efficacie per tutte le
+città
+
+Effettuo lo stsso calcolo raggruppando per mese
+
+```{r efficacia mensile}
+realestate %>%
+  group_by(month) %>%
+  summarise(efficacia_media = mean(efficacia))
+
+```
+
+```{r grafico efficacia mensile per città}
+ggplot()+
+  geom_bar(aes(x = month, y = efficacia, fill = city), stat = "identity")+
+  labs(x="Mese", y="Efficacia", title = "Efficacia mensile per città", position = "top")+
+  scale_x_continuous(breaks = seq(1, 12, 1))+
+  theme_minimal()+
+  guides(fill=guide_legend(title="City"))+
+  theme(legend.position = "top")
+```
+
+Da questi valori possiamo dedurre che i mesi dove gli annunci sono stati
+più efficaci sono quelli centrali e ciò sembra valido per tutte le città
+
+\newpage
+
+Effettuo lo stsso calcolo raggruppando per città
+
+```{r efficacia città}
+realestate %>%
+  group_by(city) %>%
+  summarise(efficacia_media = mean(efficacia))
+
+```
+
+```{r grafico efficacia città}
+ggplot()+
+  geom_bar(aes(x = city, y = efficacia, fill = as.factor(year)), position = "stack", stat = "identity")+
+  labs(x="Città", y="Efficacia", title = "Efficacia annuale per città")+
+  theme_minimal()+
+  guides(fill=guide_legend(title="Year"))+
+  theme(legend.position = "top")
+
+```
+
+Da questi valori possiamo dedurre che la città con annunci più efficaci
+è Bryan-College Station, mentre la città con annunci meno efficaci è
+Tyler Inoltre si nota nuovamente l'efficacia per anno delle diverse
+città con le stesse conclusioni dell'analisi precedente
+
+10) Prova a creare dei summary(), o semplicemente media e deviazione
+    standard, di alcune variabili a tua scelta, condizionatamente alla
+    città, agli anni e ai mesi. Riesci a fare qualche considerazione?
+
+<!-- -->
+
+a)  Utilizza i boxplot per confrontare la distribuzione del prezzo
+    mediano delle case tra le varie città. Commenta il risultato
+
+```{r boxplot city}
+
+ggplot()+
+  geom_boxplot(aes(y=median_price, x=city))+
+  labs(x="Città", y="Prezzo mediano", title = "Prezzo mediano per città")+
+  xlab("Città")+
+  scale_y_continuous(breaks = seq(0,200e3,25e3))+
+  theme_classic()
+
+```
+
+Bryan-College Station ha il prezzo mediano più alto, inoltre il suo
+primo quartile è più alto del terzo quartile di tutte le altre città
+Witcha Falls ha invece il prezzo mediano più basso di tutte e il terzo
+primo quartile è più basso del primo quartile di tutte le altre città
+Tyler, a differenza delle altre città non presenta nessun outlier
+Beaumont è quella che ha il prezzo mediano più centrato nell'intero
+range di prezzi mediani
+
+\newpage
+
+b)  Utilizza i boxplot o qualche variante per confrontare la
+    distribuzione del valore totale delle vendite tra le varie città ma
+    anche tra i vari anni. Qualche considerazione da fare?
+
+```{r boxplot confronto per città}
+library(gghalves)
+
+ggplot()+
+  geom_half_boxplot(aes(x=city, y=sales), side="l", fill="green4")+
+  geom_half_violin(aes(x=city, y=sales), side="r", fill="yellow3")+
+  labs(x="Città", y="Numero di vendite", title = "Vendite per città")+
+  theme_classic()
+
+```
+
+Da questo grafico possiamo notare come sono distribuite le vendite per
+città, in particolare: Bryan-College Station è asimmetrica negativa,
+Beaumont e tyler non presentano quasi asimmetria e Witcha falls è
+anch'essa asimmetrica negativa. Beamount e Witch Falls sono inoltre
+leptocurtiche come distribuzioni
+
+```{r boxplot confronto per anno}
+library(gghalves)
+
+ggplot()+
+  geom_half_boxplot(aes(x=as.factor(year), y=sales), side="l", fill="lightblue")+
+  geom_half_violin(aes(x=as.factor(year), y=sales), side="r", fill="pink2")+
+  labs(x="Anno", y="Numero di vendite", title = "Vendite per anno")+
+  theme_classic()
+
+```
+
+Qui possiamo notare come il numero medio di vendite sti aumentando dai
+boxplot. Dal grafico a violino invece notiamo come le distibuzioni siano
+tutte asimmetriche negative e come le distribuzioni stiano passando da
+leptocurtiche a platicurtiche
+
+\newpage
+
+```{r summary city}
+
+realestate %>%
+  group_by(city) %>%
+  summarise(mean_median_price = mean(median_price), sd_price = sd(median_price),
+            mean_sales = mean(sales), sd_sales = sd(sales),
+            mean_listings = mean(listings), sd_listings = sd(listings),
+            mean_volume = mean(volume), sd_volume = sd(volume),
+            mean_average_price = mean(average_price), sd_average_price = sd(average_price),
+            mean_efficacia = mean(efficacia), sd_efficacia = sd(efficacia)) %>%
+
+ggplot()+
+  geom_bar(aes(x = city, y = mean_median_price), fill="grey", position = "stack", stat = "identity")+
+  labs(x="Città", y="Prezzo medio", title = "Prezzo medio per città")+
+  scale_y_continuous("Prezzo medio", seq(0,200e3,20e3))+
+  theme_minimal()+
+  guides(fill = "none")
+
+
+```
+
+Dal raggruppamento per città si vede la distribuzione del prezzo medio
+per ognuna di esse I prezzi medi sono nel range 100k-160k, Brian-College
+Station è al limte superiore e Witcha falls è verso il limite inferiore
+
+```{r summary month}
+
+realestate %>%
+  group_by(month) %>%
+  summarise(mean_median_price = mean(median_price), sd_price = sd(median_price),
+            mean_sales = mean(sales), sd_sales = sd(sales),
+            mean_listings = mean(listings), sd_listings = sd(listings),
+            mean_volume = mean(volume), sd_volume = sd(volume),
+            mean_average_price = mean(average_price), sd_average_price = sd(average_price),
+            mean_efficacia = mean(efficacia), sd_efficacia = sd(efficacia)) %>%
+
+ggplot()+
+  geom_bar(aes(x = month, y = mean_median_price), fill="gray", position = "stack", stat = "identity")+
+  labs(x=NULL, title = "Prezzo medio per mese")+
+  scale_x_continuous("Mese", breaks = c(1:12))+
+  scale_y_continuous("Prezzo medio", seq(0,200e3,25e3))+
+  theme_minimal()+
+  guides(fill = FALSE)  
+
+
+```
+
+Il prezzo medio è abbastanza uniforme durante tutti i mesi
+
+```{r summary year}
+
+realestate %>%
+  group_by(year) %>%
+  summarise(mean_median_price = mean(median_price), sd_price = sd(median_price)) %>%
+
+ggplot()+
+  geom_bar(aes(x = year, y = mean_median_price), fill="gray", position = "stack", stat = "identity")+
+  geom_freqpoly(aes(x = year, y = mean_median_price, group = 1), stat = "identity", color = "black", lwd = 1)+
+  geom_point(aes(x = year, y = mean_median_price), size = 3, color = "red")+
+  labs(x="Anno", y="Prezzo medio", title = "Prezzo medio per anno")+
+  scale_x_continuous(breaks = c(2010:2014))+
+  scale_y_continuous(breaks = seq(0, 200000, 20000))+
+  theme_minimal()
+
+
+```
+
+Da questo grafico si apprezza il trend crescente del prezzo medio
+durante gli anni
+
+```{r summary city median price}
+realestate %>%
+  group_by(year) %>%
+  summarise(mean_sales = mean(sales), sd_sales = sd(sales))%>%
+
+ggplot()+
+  geom_bar(aes(x = year, y = mean_sales), fill = "gray", position = "stack", stat = "identity")+
+  geom_freqpoly(aes(x = year, y = mean_sales, group = 1), stat = "identity", color = "black", lwd = 1)+
+  geom_point(aes(x = year, y = mean_sales), size = 3, color = "red")+
+  labs(x="Anno", y="Vendite", title = "Prezzo mediano per anno")+
+  scale_x_continuous(breaks = c(2010:2014))+
+  scale_y_continuous(breaks = seq(0, 200, 20))+
+  theme_minimal()
+```
+
+Si osserva che il prezzo mediano sta crescendo in maniera più evidente
+del prezzo medio, quindi anche se in media la distribuzione di prezzo
+cresce lentamente, il prezzo sta comunque crescendo ed il prezzo mediano
+ci fa apprezzare meglio questo fenomeno
+
+\newpage
+
+# TODO, dai un'occhiata da qui in poi su titoli, titoli assi e valori
+
+c)  Usa un grafico a barre sovrapposte per ogni anno, per confrontare il
+    totale delle vendite nei vari mesi, sempre considerando le città.
+    Prova a commentare ciò che viene fuori. Già che ci sei prova anche
+    il grafico a barre normalizzato. Consiglio: Stai attento alla
+    differenza tra geom_bar() e geom_col(). PRO LEVEL: cerca un modo
+    intelligente per inserire ANCHE la variabile Year allo stesso blocco
+    di codice, senza però creare accrocchi nel grafico.
+
+```{r summary city total sales}
+realestate %>%
+  group_by(month) %>%
+  reframe(total_sales = sum(sales*average_price), city=city)%>%
+  
+ggplot()+
+  geom_bar(aes(x = month, y = total_sales/1e9, fill = city), stat = "identity")+
+  labs(x="Mese", y="Vendite totali Miliardi di dollari",  title = "Vendite mensili totali per città")+
+  scale_x_continuous(breaks = c(1:12))+
+  scale_y_continuous(breaks = seq(0,20,5), label = scales::label_number(suffix = "B$"))+
+  theme_minimal()+
+  theme(legend.position = "top")
+```
+
+Risulta evidente come nei mesi centrali dell'anno le vendite aumentino,
+verifichiamo se perchè aumenta il numero o perchè aumentano i prezzi
+
+```{r summary city sales}
+realestate %>%
+  group_by(month) %>%
+  reframe(total_sales = sum(sales), city=city)%>%
+  
+ggplot()+
+  geom_bar(aes(x = month, y = total_sales, fill = city), stat = "identity")+
+  labs(x="Mese", y="Numero di vendite", title = "Numero di vendite mensili totali mensili per città")+
+  scale_x_continuous(breaks = c(1:12))+
+  theme_minimal()+
+  theme(legend.position = "top")
+
+
+```
+
+Il trend crescente nella parte centrale dell'anno è molto evidente
+
+```{r summary city average price}
+realestate %>%
+  group_by(month) %>%
+  reframe(sum_avg_price = sum(average_price), city=city)%>%
+  
+ggplot()+
+  geom_bar(aes(x = month, y = sum_avg_price/1e6, fill = city), stat = "identity")+
+  labs(x="Mese", y="Prezzo medio mensile totale", title = "Totale dei prezzi medi mensili")+
+  scale_x_continuous(breaks = c(1:12))+
+  scale_y_continuous(breaks = seq(0,70,10))+
+  theme_minimal()+
+  theme(legend.position = "top")
+
+```
+
+Il trend è abbastanza costante durante tutti i mesi dell'anno, c'è un
+leggero incremento nella parte centrale Dunque il trend crescente nella
+parte centrale dell'anno è dato dall'aumento del prezzo medio, l'aumento
+del numero mensile di vendite amplifica il fenomeno
+
+\newpage
+
+d)  Crea un line chart di una variabile a tua scelta per fare confronti
+    commentati fra città e periodi storici. Ti avviso che probabilmente
+    all'inizio ti verranno fuori linee storte e poco chiare, ma non
+    demordere. Consigli: Prova inserendo una variabile per volta. Prova
+    a usare variabili esterne al dataset, tipo vettori creati da te
+    appositamente.
+
+```{r city line chart}
+
+cities <- c("Beaumont", "Bryan-College Station", "Tyler", "Wichita Falls")
+realestate_filtered <- filter(realestate, city %in% cities)
+
+ggplot(realestate_filtered, aes(x = month, y = median_price, color =city)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ year, scales = "free_y") +
+  labs(x = NULL, y = "Prezzo mediano", title = "Prezzo mediano mensile per anno (Tutte le città)") +
+  scale_x_continuous(breaks = c(1:12)) +
+  scale_y_continuous("Prezzo mediano", breaks = seq(0, 200000, 20000)) +
+  scale_color_discrete(name = "Città") +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+
+Qui la visione d'insieme per ogni anno suddivisa per città e per mese.
+Si nota come i prezzi medi siano sempre più alti per Bryan-College
+Station.
+
+```{r yearly line chart}
+
+cities <- c("Beaumont", "Bryan-College Station", "Tyler", "Wichita Falls")
+realestate_filtered <- filter(realestate, city %in% cities)
+
+ggplot(realestate_filtered, aes(x = month, y = median_price, color = as.factor(year))) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ city, scales = "free_y") +
+  labs(x = "", y = "Prezzo mediano", title = "Prezzo mediano mensile per città (Tutti gli anni)") +
+  scale_x_continuous(breaks = c(1:12)) +
+  scale_y_continuous("Prezzo mediano", breaks = seq(0, 200000, 20000)) +
+  scale_color_discrete(name = "Anno") +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+
+Facendo un confronto per ogni città per ogni anno si può evincere il
+trend crescente per Bryan-College Station e Tyler, per Beaumont e
+Wichita Falls il trend è invece abbastanza costante.
+
+In conclusione il mercato del Texas sta crescendo durante gli anni, questo aspetto è evidente specialmente nella città di Bryan-College Station.
